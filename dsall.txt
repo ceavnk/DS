@@ -1,0 +1,1138 @@
+#2 Data Frames and Basic Data Pre-processing:
+
+
+import pandas as pd
+
+# Read CSV
+csv_file = 'PlayTENNIES.csv'
+df_csv = pd.read_csv(csv_file)
+print(df_csv.tail())
+print("Shape:", df_csv.shape)
+print("Columns:", df_csv.columns)
+print("Dtypes:", df_csv.dtypes)
+
+# Read JSON
+json_file = 'sample_data.json'
+df_json = pd.read_json(json_file)
+print("JSON Data:\n", df_json.head())
+print("Head(2):\n", df_json.head(2))
+print("Tail(2):\n", df_json.tail(2))
+
+
+
+print(df_csv)
+
+# Method 1: Drop rows with missing values
+df_cleaned = df_csv.dropna()
+print("After dropping rows:\n", df_cleaned)
+
+# Method 2: Drop columns with missing values
+df_cleaned_col = df_csv.dropna(axis=1)
+print("After dropping columns:\n", df_cleaned_col)
+
+# Count missing values
+print("Missing values:\n", df_csv.isnull().sum())
+
+# Fill missing 'temp' with mode
+df_csv['temp'].fillna(df_csv['temp'].mode()[0], inplace=True)
+print("After filling 'temp' with mode:\n", df_csv)
+
+# Fill missing 'sno' with mean
+df_csv['sno'].fillna(df_csv['sno'].mean(), inplace=True)
+print("After filling 'sno' with mean:\n", df_csv)
+
+
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Identify outliers
+sns.boxplot(data=df_csv['no_of_people'])
+plt.show()
+
+# Remove extreme outliers
+Q1 = df_csv['no_of_people'].quantile(0.25)
+Q3 = df_csv['no_of_people'].quantile(0.75)
+IQR = Q3 - Q1
+lower_bound = Q1 - 1.5 * IQR
+upper_bound = Q3 + 1.5 * IQR
+
+extreme_outliers = df_csv[(df_csv['no_of_people'] < lower_bound) | (df_csv['no_of_people'] > upper_bound)]
+print("Extreme Outliers:\n", extreme_outliers)
+
+df_cleaned = df_csv[(df_csv['no_of_people'] >= lower_bound) & (df_csv['no_of_people'] <= upper_bound)]
+print("Cleaned Data:\n", df_cleaned)
+
+# Boxplot after cleaning
+sns.boxplot(data=df_cleaned['no_of_people'])
+plt.show()
+
+
+
+
+
+f_df = df_csv[df_csv['no_of_people'] > 2]
+print("Filtered Data:\n", f_df)
+
+
+
+
+
+s_df = df_csv.sort_values(by='no_of_people', ascending=False)
+print("Sorted Data:\n", s_df)
+
+
+
+g_df = df_csv.groupby('outlook').size()
+print("Grouped Data:\n", g_df)
+
+
+
+
+
+
+
+
+
+
+
+#3 Feature Scaling and Dummification: 
+
+import pandas as pd
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+
+data = {
+    'product': ['Apple_juice', 'Banana_Smoothie', 'Orange_Jam', 'Grape_Jelly', 'Kiwi_Parfait',
+                'Mango_Chutney', 'Pineapple_Sorbet', 'Strawberry_yogurt', 'Blueberry_pie', 'Cherry_Sal'],
+    'Category': ['Apple', 'Banana', 'Orange', 'Grape', 'Kiwi', 'Mango', 'Pipneapple', 'Strawberry', 'Blueberry', 'Cherry'],
+    'Sales': [1200, 1700, 2200, 1400, 2000, 1000, 1500, 1800, 1300, 1600],
+    'Cost': [600, 850, 1100, 700, 1000, 500, 750, 900, 650, 800],
+    'Profit': [600, 850, 1100, 700, 1000, 500, 750, 900, 650, 800]
+}
+
+df = pd.DataFrame(data)
+
+n_columns = ['Sales', 'Cost', 'Profit']
+s_std = StandardScaler()
+s_nor = MinMaxScaler()
+
+df_s_std = pd.DataFrame(s_std.fit_transform(df[n_columns]), columns=n_columns)
+df_s_nor = pd.DataFrame(s_nor.fit_transform(df[n_columns]), columns=n_columns)
+df_scaled = pd.concat([df_s_std, df.drop(n_columns, axis=1)], axis=1)
+
+print("Data after Feature Scaling:")
+print(df_scaled)
+
+categorical_columns = ['product', 'Category']
+
+preprocessor = ColumnTransformer(
+    transformers=[('categorical', OneHotEncoder(), categorical_columns)],
+    remainder='passthrough'
+)
+
+df_dummified = pd.DataFrame(preprocessor.fit_transform(df).toarray())
+df_dummified.columns = preprocessor.get_feature_names_out()
+
+print("\nData after Feature Dummification:")
+print(df_dummified)
+
+
+
+
+
+
+
+#4 Hypothesis Testing
+
+
+
+
+import scipy.stats as stats
+import numpy as np
+
+# One-sample t-test
+g1 = [72,88,64,74,67,79,85,75,89,77]
+assumed_mean = 70
+t_stat, p_val = stats.ttest_1samp(g1, assumed_mean)
+alpha = 0.05
+df = len(g1) - 1
+critical_t = stats.t.ppf(1 - alpha, df)
+print("T-value:", t_stat, "P-value:", p_val, "Critical t-value:", critical_t)
+if np.abs(t_stat) > critical_t:
+    print("Reject H0: Mean is significantly different.")
+else:
+    print("Fail to reject H0: No significant difference.")
+
+# Independent two-sample t-test
+g1 = [85,95,100,80,90,97,104,95,88,92,94,99]
+g2 = [83,85,96,92,100,104,94,95,88,90,93,94]
+t_stat, p_val = stats.ttest_ind(g1, g2)
+df = (len(g1) - 1) + (len(g2) - 1)
+critical_t = stats.t.ppf(1 - alpha/2, df)
+print("T-value:", t_stat, "P-value:", p_val, "Critical t-value:", critical_t)
+if np.abs(t_stat) > critical_t:
+    print("Reject H0: Significant difference between groups.")
+else:
+    print("Fail to reject H0: No significant difference between groups.")
+
+# Paired t-test
+g1 = [85,68,67,84,98,60,94,80,94,98,95,80,85,87,75]
+g2 = [70,90,80,89,88,86,78,87,90,86,92,94,99,93,86]
+t_stat, p_val = stats.ttest_rel(g1, g2)
+df = len(g2) - 1
+critical_t = stats.t.ppf(1 - alpha/2, df)
+print("T-value:", t_stat, "P-value:", p_val, "Critical t-value:", critical_t)
+if np.abs(t_stat) > critical_t:
+    print("Reject H0: Significant difference between paired groups.")
+else:
+    print("Fail to reject H0: No significant difference between paired groups.")
+
+# Chi-square test
+from scipy.stats import chi2_contingency
+contingency_table = [[50,75],[125,175],[90,30],[45,10]]
+chi2_stat, p_val, dof, expected_table = chi2_contingency(contingency_table)
+print("Chi-square statistic:", chi2_stat, "P-value:", p_val, "Degrees of freedom:", dof)
+if p_val < alpha:
+    print("Reject H0: Association exists between groups.")
+else:
+    print("Fail to reject H0: No association between groups.")
+
+
+
+
+
+
+
+
+#5 ANOVA (Analysis of Variance)
+
+
+
+
+dietData <- read.csv("c\download\90_Data_File.csv", header = TRUE, sep = ",")
+print(dietData)
+
+boxplot(dietData$Weight.Loss ~ dietData$Diet, data = dietData, col = "light blue", ylab = "Weight loss (kg)", xlab = "Diet type")
+
+dietData$Diet <- as.factor(dietData$Diet)
+
+table <- aov(dietData$Weight.Loss ~ dietData$Diet, data = dietData)
+summary(table)
+
+TukeyHSD(table)
+plot(TukeyHSD(table))
+
+
+
+
+
+#6Aim:-Regression and Its Types:-
+
+import pandas as pd
+import seaborn as sns
+from sklearn import linear_model
+import warnings
+import statsmodels.api as sm
+import matplotlib.pyplot as plt
+
+# Single Variable Regression
+df = pd.read_csv(r'C:\Users\aksha\Downloads\house_pricing.csv')
+warnings.filterwarnings('ignore')
+sns.lmplot(x="Area", y="Price", data=df)
+reg = linear_model.LinearRegression()
+reg.fit(df[["Area"]], df[["Price"]])
+reg.predict([[500]])
+reg.coef_
+reg.intercept_
+
+# Multi-variable Regression
+df = pd.read_csv(r"C:\Users\aksha\Downloads\House_Pricing_Multivariables.csv")
+mean_f1 = round(df.Floors.mean())
+df.Floors = df.Floors.fillna(mean_f1)
+reg = linear_model.LinearRegression()
+reg.fit(df[['Bedrooms', 'Bathrooms', 'Sqft_living', 'Floors', 'Grade', 'Sqft_above', 'Sqft_basement']], df['Price'])
+reg.predict([[3, 2, 1180, 1, 7, 1180, 0]])
+
+# Model Summary using Statsmodels
+data = pd.read_csv(r"C:\Users\aksha\Downloads\homeprices.csv")
+x = data[['area', 'bedrooms', 'age']]
+y = data['price']
+X = sm.add_constant(x)
+model = sm.OLS(y, X).fit()
+print(model.summary())
+
+# Residual Plot
+residuals = y - model.predict(X)
+plt.scatter(model.predict(X), residuals)
+plt.axhline(y=0, color='r', linestyle='--')
+plt.xlabel('Predicted Price')
+plt.ylabel('Residuals')
+plt.title('Residual Plot')
+plt.show()
+
+
+
+
+
+
+
+#7Logistic Regression and Decision Tree:
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, classification_report
+from sklearn.tree import DecisionTreeClassifier, export_text
+import numpy as np
+
+X = np.array([[1], [2], [3], [4], [5]])
+y = np.array([0, 0, 0, 1, 1])
+
+model = LogisticRegression()
+model.fit(X, y)
+
+n_data = np.array([[4.5]])
+y_pred = model.predict(n_data)
+print("Prediction:", y_pred)
+
+prob = model.predict_proba(n_data)
+print("Predict Probabilities:", prob)
+
+accuracy = accuracy_score(y, model.predict(X))
+precision = precision_score(y, model.predict(X))
+recall = recall_score(y, model.predict(X))
+f1 = f1_score(y, model.predict(X))
+
+print(f"Accuracy: {accuracy:.2f}")
+print(f"Precision: {precision:.2f}")
+print(f"Recall: {recall:.2f}")
+print(f"F1 Score: {f1:.2f}")
+
+conf_matrix = confusion_matrix(y, model.predict(X))
+print("Confusion Matrix:\n", conf_matrix)
+
+print("\nClassification Report:")
+print(classification_report(y, model.predict(X)))
+
+x = np.array([[1, 50], [2, 60], [3, 65], [4, 75], [5, 90]])
+y = np.array([0, 0, 0, 1, 1])
+
+model_tree = DecisionTreeClassifier()
+model_tree.fit(x, y)
+
+tree_rules = export_text(model_tree, feature_names=["Years_Experience", "Performance_Score"])
+print("\nDecision Tree Rules:\n", tree_rules)
+
+new_data = np.array([[4, 72]])
+prediction = model_tree.predict(new_data)
+print("\nPrediction for [4 Years, 72 Score]:", "Promoted" if prediction[0] == 1 else "Not Promoted")
+
+
+
+
+
+
+#8Clustering with K-Means
+
+
+from sklearn.cluster import KMeans
+import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+from matplotlib import pyplot as plt
+%matplotlib inline
+
+df = pd.read_csv("income.csv")
+plt.scatter(df.Age, df['Income($)'])
+plt.xlabel('Age')
+plt.ylabel('Income($)')
+
+
+
+
+km = KMeans(n_clusters=3)
+y_predicted = km.fit_predict(df[['Age', 'Income($)']])
+df['cluster'] = y_predicted
+
+df1 = df[df.cluster == 0]
+df2 = df[df.cluster == 1]
+df3 = df[df.cluster == 2]
+plt.scatter(df1.Age, df1['Income($)'], color='green')
+plt.scatter(df2.Age, df2['Income($)'], color='red')
+plt.scatter(df3.Age, df3['Income($)'], color='black')
+plt.scatter(km.cluster_centers_[:, 0], km.cluster_centers_[:, 1], color='purple', marker='*', label='centroid')
+plt.xlabel('Age')
+plt.ylabel('Income($)')
+plt.legend()
+
+
+
+
+
+scaler = MinMaxScaler()
+df['Income($)'] = scaler.fit_transform(df[['Income($)']])
+df['Age'] = scaler.fit_transform(df[['Age']])
+
+plt.scatter(df.Age, df['Income($)'])
+
+
+
+
+km = KMeans(n_clusters=3)
+y_predicted = km.fit_predict(df[['Age', 'Income($)']])
+df['cluster'] = y_predicted
+
+df1 = df[df.cluster == 0]
+df2 = df[df.cluster == 1]
+df3 = df[df.cluster == 2]
+plt.scatter(df1.Age, df1['Income($)'], color='green')
+plt.scatter(df2.Age, df2['Income($)'], color='red')
+plt.scatter(df3.Age, df3['Income($)'], color='black')
+plt.scatter(km.cluster_centers_[:, 0], km.cluster_centers_[:, 1], color='purple', marker='*', label='centroid')
+plt.legend()
+
+
+
+sse = []
+k_rng = range(1, 10)
+for k in k_rng:
+    km = KMeans(n_clusters=k)
+    km.fit(df[['Age', 'Income($)']])
+    sse.append(km.inertia_)
+
+plt.xlabel('K')
+plt.ylabel('Sum of squared error')
+plt.plot(k_rng, sse)
+
+
+
+
+
+
+
+
+
+#9Principal Component Analysis (PCA) Tutorial
+
+from sklearn.datasets import load_digits
+import pandas as pd
+from matplotlib import pyplot as plt
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.decomposition import PCA
+%matplotlib inline
+
+dataset = load_digits()
+dataset.keys()
+dataset.data.shape
+dataset.data[0]
+dataset.data[0].reshape(8,8)
+
+plt.gray()
+plt.matshow(dataset.data[0].reshape(8,8))
+plt.matshow(dataset.data[9].reshape(8,8))
+
+dataset.target[:5]
+
+df = pd.DataFrame(dataset.data, columns=dataset.feature_names)
+df.head()
+dataset.target
+df.describe()
+
+X = df
+y = dataset.target
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=30)
+
+model = LogisticRegression()
+model.fit(X_train, y_train)
+model.score(X_test, y_test)
+
+pca = PCA(0.95)
+X_pca = pca.fit_transform(X)
+X_pca.shape
+pca.explained_variance_ratio_
+pca.n_components_
+
+X_train_pca, X_test_pca, y_train, y_test = train_test_split(X_pca, y, test_size=0.2, random_state=30)
+
+model = LogisticRegression(max_iter=1000)
+model.fit(X_train_pca, y_train)
+model.score(X_test_pca, y_test)
+
+pca = PCA(n_components=2)
+X_pca = pca.fit_transform(X)
+X_pca.shape
+X_pca
+pca.explained_variance_ratio_
+
+X_train_pca, X_test_pca, y_train, y_test = train_test_split(X_pca, y, test_size=0.2, random_state=30)
+
+model = LogisticRegression(max_iter=1000)
+model.fit(X_train_pca, y_train)
+model.score(X_test_pca, y_test)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Implement Decision Tree Model using Iris dataset
+
+from sklearn.datasets import load_iris
+from sklearn.tree import DecisionTreeClassifier, export_text
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+iris = load_iris()
+X = iris.data
+y = iris.target
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+model = DecisionTreeClassifier(random_state=42)
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy:", accuracy)
+
+tree_rules = export_text(model, feature_names=iris.feature_names)
+print(tree_rules)
+
+
+
+
+
+
+
+Load Iris Dataset. Apply K-means Algorithm Elbow
+Method,Silhouette analysis
+
+import pandas as pd
+import numpy as np
+from sklearn.datasets import load_iris
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+iris = load_iris()
+X = pd.DataFrame(iris.data, columns=iris.feature_names)
+
+wcss = []
+silhouette_scores = []
+K = range(2, 11)
+
+for k in K:
+    kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+    kmeans.fit(X)
+    wcss.append(kmeans.inertia_)
+    silhouette_scores.append(silhouette_score(X, kmeans.labels_))
+
+plt.plot(K, wcss, 'bo-')
+plt.xlabel('Number of Clusters')
+plt.ylabel('WCSS')
+plt.title('Elbow Method')
+plt.show()
+
+plt.plot(K, silhouette_scores, 'go-')
+plt.xlabel('Number of Clusters')
+plt.ylabel('Silhouette Score')
+plt.title('Silhouette Analysis')
+plt.show()
+
+optimal_k = 3
+kmeans = KMeans(n_clusters=optimal_k, random_state=42, n_init=10)
+X['Cluster'] = kmeans.fit_predict(X)
+
+sns.pairplot(X, hue='Cluster', palette='tab10')
+plt.show()
+
+centers = pd.DataFrame(kmeans.cluster_centers_, columns=iris.feature_names)
+print(centers)
+
+
+
+
+
+Perform Chi-Square Test
+
+
+
+import pandas as pd
+from scipy.stats import chi2_contingency
+
+aptitude = [85, 65, 50, 68, 87, 74, 65, 96, 68, 94, 73, 84, 85, 87, 91]
+jobprof = [70, 90, 80, 89, 88, 86, 78, 67, 86, 90, 92, 94, 99, 93, 87]
+
+df = pd.DataFrame({'Aptitude': aptitude, 'JobProf': jobprof})
+
+df['Aptitude_cat'] = pd.cut(df['Aptitude'], bins=[0, 70, 85, 100], labels=['Low', 'Medium', 'High'])
+df['JobProf_cat'] = pd.cut(df['JobProf'], bins=[0, 80, 90, 100], labels=['Low', 'Medium', 'High'])
+
+contingency_table = pd.crosstab(df['Aptitude_cat'], df['JobProf_cat'])
+
+chi2, p, dof, expected = chi2_contingency(contingency_table)
+
+print("Chi-Square Value:", chi2)
+print("p-value:", p)
+print("Degrees of Freedom:", dof)
+print("Expected Frequencies:\n", expected)
+
+
+
+
+Perform Logistic Regression
+
+
+from sklearn.datasets import load_iris
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+
+iris = load_iris()
+X = iris.data
+y = (iris.target == 0).astype(int)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+model = LogisticRegression(max_iter=200)
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
+print("Classification Report:\n", classification_report(y_test, y_pred))
+
+
+
+
+
+
+Perform Data pre-processing
+
+
+
+import pandas as pd
+import numpy as np
+
+data = {
+    'Country': ['France', 'Spain', 'Germany', 'Spain', 'Germany', 'France', 'Spain', 'France', 'Germany', 'France'],
+    'Age': [44, 27, 30, 38, 40, 35, np.nan, 48, 50, 37],
+    'Salary': [72000, 48000, 54000, 61000, np.nan, 58000, 52000, 79000, 83000, 67000],
+    'Purchased': ['No', 'Yes', 'No', 'No', 'Yes', 'Yes', 'No', 'Yes', 'No', 'Yes']
+}
+
+df = pd.DataFrame(data)
+df.to_csv('employee_data.csv', index=False)
+
+df = pd.read_csv('employee_data.csv')
+
+df['Age'].fillna(df['Age'].mean(), inplace=True)
+df['Salary'].fillna(df['Salary'].mean(), inplace=True)
+
+Q1 = df['Salary'].quantile(0.25)
+Q3 = df['Salary'].quantile(0.75)
+IQR = Q3 - Q1
+lower = Q1 - 1.5 * IQR
+upper = Q3 + 1.5 * IQR
+
+df = df[(df['Salary'] >= lower) & (df['Salary'] <= upper)]
+
+print(df)
+
+
+
+
+. Implement Multiple Linear Regression with dataset
+
+
+
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+
+data = {
+    'Bedrooms': [3, 3, 2, 3, 2, 4, 3, 1, 2, 3],
+    'Bathrooms': [1, 2.25, 1, 1, 2, 4.5, 2.25, 1, 1, 2.5],
+    'Sqft_living': [1180, 2570, 770, 1960, 1680, 5420, 1715, 1060, 1780, 3560],
+    'Floors': [1, 2, 1, 1, 1, 1, 1, 1, 1, 1],
+    'Grade': [7, 7, 6, 7, 8, 11, 7, 7, 7, 9],
+    'Sqft_above': [1180, 2170, 770, 1050, 1680, 3890, 1715, 1060, 1050, 1860],
+    'Sqft_basement': [0, 400, 0, 910, 0, 1530, 0, 0, 730, 1700],
+    'Price': [221900, 538000, 180000, 604000, 510000, 1225000, 257500, 291850, 229500, 662500]
+}
+
+house_df = pd.DataFrame(data)
+
+X = house_df.drop('Price', axis=1)
+y = house_df['Price']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print("Mean Squared Error:", mse)
+print("R-squared:", r2)
+
+
+
+
+
+
+ Apply Feature Scaling with data set
+
+
+
+import pandas as pd
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+
+data = {
+    'Make': ['Honda', 'Honda', 'Toyota', 'Nissan', 'Toyota', 'Honda', 'Ford', 'Chevrolet', 'Chevrolet', 'Dodge', 'Dodge'],
+    'Model': ['Accord', 'Accord', 'Camry', 'Altima', 'Corolla', 'Civic', 'F-150', 'Silverado', 'Impala', 'Charger', 'Charger'],
+    'Color': ['Red', 'Blue', 'Black', 'Green', 'Black', 'White', 'Black', 'Green', 'Silver', 'Silver', 'Black'],
+    'Mileage': [63512, 95135, 75006, 69847, 87678, 138789, 89073, 109231, 87675, 34853, 58173],
+    'Sell Price': [4000, 2500, 4500, 3826, 2224, 2723, 3950, 4959, 3791, 4349, 4252]
+}
+
+df = pd.DataFrame(data)
+
+scaler_standard = StandardScaler()
+df_standard = df.copy()
+df_standard[['Mileage', 'Sell Price']] = scaler_standard.fit_transform(df_standard[['Mileage', 'Sell Price']])
+
+scaler_minmax = MinMaxScaler()
+df_minmax = df.copy()
+df_minmax[['Mileage', 'Sell Price']] = scaler_minmax.fit_transform(df_minmax[['Mileage', 'Sell Price']])
+
+print(df_standard)
+print(df_minmax)
+
+
+
+
+
+Implement Multiple Linear Regression without dataset
+
+
+
+from sklearn.datasets import load_diabetes
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+
+diabetes = load_diabetes()
+X = diabetes.data
+y = diabetes.target
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print("Mean Squared Error:", mse)
+print("R-squared:", r2)
+
+
+
+
+
+
+
+ “Make” of car. with csv file
+
+
+
+import pandas as pd
+
+data = {
+    'Make': ['Honda', 'Honda', 'Toyota', 'Nissan', 'Toyota', 'Honda', 'Ford', 'Chevrolet', 'Chevrolet', 'Dodge', 'Dodge'],
+    'Model': ['Accord', 'Accord', 'Camry', 'Altima', 'Corolla', 'Civic', 'F-150', 'Silverado', 'Impala', 'Charger', 'Charger'],
+    'Color': ['Red', 'Blue', 'Black', 'Green', 'Black', 'White', 'Black', 'Green', 'Silver', 'Silver', 'Silver'],
+    'Mileage': [63512, 95135, 75006, 69847, 87278, 138789, 89073, 109231, 87675, 34853, 58173],
+    'Sell Price': [4000, 2500, 45000, 3826, 2224, 2723, 3950, 4959, 3791, 4349, 4252],
+    'Buy Price': [3000, 2000, 44000, 3000, 2100, 1900, 3000, 4500, 3700, 3500, 4000]
+}
+
+df = pd.DataFrame(data)
+df.to_csv('car_data.csv', index=False)
+
+df = pd.read_csv('car_data.csv')
+
+
+greater_4000 = df[df['Sell Price'] > 4000]
+print(greater_4000)
+
+
+sorted_df = df.sort_values(by='Sell Price')
+print(sorted_df)
+
+
+grouped_df = df.groupby('Make').mean(numeric_only=True)
+print(grouped_df)
+
+
+
+
+
+
+Load the Iris dataset. Perform Principal component Analysis (PCA)
+
+import pandas as pd
+from sklearn.datasets import load_iris
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
+
+iris = load_iris()
+X = iris.data
+y = iris.target
+target_names = iris.target_names
+
+X_scaled = StandardScaler().fit_transform(X)
+X_reduced = PCA(n_components=2).fit_transform(X_scaled)
+
+plt.figure(figsize=(8, 6))
+for i, name in enumerate(target_names):
+    plt.scatter(X_reduced[y == i, 0], X_reduced[y == i, 1], label=name)
+plt.xlabel('PC1')
+plt.ylabel('PC2')
+plt.title('PCA - Iris Dataset')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+
+
+
+Perform One Way ANOVA Test
+
+from scipy import stats
+
+# Data for each class
+class_A = [85, 90, 88, 82, 87]
+class_B = [76, 78, 80, 81, 75]
+class_C = [92, 88, 94, 89, 90]
+
+# One-Way ANOVA
+f_statistic, p_value = stats.f_oneway(class_A, class_B, class_C)
+
+print("F-statistic:", f_statistic)
+print("P-value:", p_value)
+
+
+
+
+
+two Sampled T-Test using Python
+
+
+
+from scipy.stats import ttest_ind
+
+group1 = [85,95,100,80,90,97,104,95,88,92,94,99]
+group2 = [83,85,96,92,100,104,94,95,88,90,93,94]
+
+t_stat, p_val = ttest_ind(group1, group2)
+
+print("T-statistic:", t_stat)
+print("P-value:", p_val)
+
+
+
+
+
+Construct a Decision Tree using with 20  data set
+
+import pandas as pd
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+data = {
+    "Outlook": ["Sunny", "Sunny", "Overcast", "Rain", "Rain", "Rain", "Overcast", "Sunny", "Sunny", "Rain",
+                "Sunny", "Overcast", "Overcast", "Rain", "Sunny", "Overcast", "Rain", "Rain", "Sunny", "Rain"],
+    "Wind": ["Weak", "Strong", "Weak", "Weak", "Strong", "Weak", "Strong", "Weak", "Weak", "Weak",
+             "Strong", "Strong", "Weak", "Strong", "Strong", "Weak", "Weak", "Strong", "Weak", "Strong"],
+    "PlayTennis": ["No", "No", "Yes", "Yes", "No", "Yes", "Yes", "No", "Yes", "Yes",
+                   "Yes", "Yes", "Yes", "No", "No", "Yes", "Yes", "No", "No", "Yes"]
+}
+
+df = pd.DataFrame(data)
+
+le = LabelEncoder()
+df['Outlook'] = le.fit_transform(df['Outlook'])
+df['Wind'] = le.fit_transform(df['Wind'])
+df['PlayTennis'] = le.fit_transform(df['PlayTennis'])
+
+X = df[['Outlook', 'Wind']]
+y = df['PlayTennis']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
+
+model = DecisionTreeClassifier()
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy:", accuracy)
+
+
+
+
+
+
+
+Implement Decision Tree Model on Titanic dataset 
+
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+
+# Dataset
+height = np.array([151, 174, 138, 186, 128, 136, 179, 163, 152]).reshape(-1, 1)
+weight = np.array([63, 81, 56, 91, 47, 57, 76, 72, 62])
+
+# Linear Regression model
+model = LinearRegression()
+model.fit(height, weight)
+
+# Predict weight
+predicted_weight = model.predict(height)
+
+# Output results
+print("Intercept:", model.intercept_)
+print("Coefficient:", model.coef_)
+
+# Plotting
+plt.scatter(height, weight, color='blue')
+plt.plot(height, predicted_weight, color='red')
+plt.xlabel("Height")
+plt.ylabel("Weight")
+plt.title("Linear Regression: Height vs Weight")
+plt.show()
+
+
+
+
+
+“Model” of car with csv file data set
+
+import pandas as pd
+df = pd.read_csv("car_data.csv")
+print("Cars with Buy Price >= 3000:")
+print(df[df["Buy Price"] >= 3000])
+sorted_df = df.sort_values(by="Buy Price")
+print("\nSorted Data (by Buy Price):")
+print(sorted_df)
+grouped = df.groupby("Model")
+print("\nGrouped by Model:")
+for name, group in grouped:
+    print(f"\nModel: {name}")
+    print(group)
+
+
+
+
+
+
+Perform Linear Regression with dataset
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+
+experience = np.array([2, 10, 4, 20, 8, 12, 22]).reshape(-1, 1)
+salary = np.array([30000, 95000, 45000, 178000, 84000, 120000, 200000])
+
+model = LinearRegression()
+model.fit(experience, salary)
+y
+predicted_salary = model.predict(experience)
+
+print("Intercept:", model.intercept_)
+print("Coefficient (slope):", model.coef_[0])
+
+plt.scatter(experience, salary, color='blue', label='Actual Salary')
+plt.plot(experience, predicted_salary, color='red', label='Predicted Salary Line')
+plt.xlabel("Years of Experience")
+plt.ylabel("Salary")
+plt.title("Linear Regression: Experience vs Salary")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+
+
+
+
+
+
+
+lookup Find the Part Name for Part Number “A002”
+
+=VLOOKUP("A002", B2:E21, 3, FALSE)
+=VLOOKUP("Ball Joint", C2:E21, 1, FALSE)
+=INDEX(A2:A21, MATCH("Ball Joint", C2:C21, 0))
+=VLOOKUP("muffler", C2:E21, 2, FALSE)
+=VLOOKUP("muffler", A2:E21, 4, FALSE)
+=VLOOKUP("A008", B2:E21, 4, FALSE)
+
+
+
+
+
+
+Perform Linear Regression on the Iris dataseimport pandas as pd
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+
+iris = sns.load_dataset("iris")
+
+X = iris[["petal_length"]]  # Predictor
+y = iris["petal_width"]     # Target
+
+model = LinearRegression()
+model.fit(X, y)
+
+y_pred = model.predict(X)
+print("Intercept:", model.intercept_)
+print("Coefficient (slope):", model.coef_[0])
+
+plt.scatter(X, y, color='blue', label="Actual")
+plt.plot(X, y_pred, color='red', label="Prediction")
+plt.xlabel("Petal Length")
+plt.ylabel("Petal Width")
+plt.title("Linear Regression on Iris Dataset")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+
+
+
+
+lookup Oil Pump
+
+
+=VLOOKUP("A016", B2:D21, 2, FALSE)
+=VLOOKUP("Oil Pump", C2:A21, 2, FALSE)
+=VLOOKUP("brake pads", C2:E21, 2, FALSE)
+=VLOOKUP("brake rotors", C2:E21, 2, FALSE)
+=VLOOKUP("A020", B2:E21, 4, FALSE)
+
+
+
+
+Perform data pre-processing with csv file 
+
+import pandas as pd
+import numpy as np
+
+df = pd.read_csv("student_data.csv")
+print("Missing Values:\n", df.isnull().sum())
+Q1 = df["Marks"].quantile(0.25)
+Q3 = df["Marks"].quantile(0.75)
+IQR = Q3 - Q1
+lower_bound = Q1 - 1.5 * IQR
+upper_bound = Q3 + 1.5 * IQR
+df["Marks"] = np.where(df["Marks"] < lower_bound, lower_bound,
+               np.where(df["Marks"] > upper_bound, upper_bound, df["Marks"]))
+df["Class"] = df["Class"].str.upper()
+print(df)
+
+
+
+
+
+
+Feature Scaling
+
+from sklearn.datasets import fetch_california_housing
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+import pandas as pd
+housing = fetch_california_housing()
+df = pd.DataFrame(housing.data, columns=housing.feature_names)
+scaler_standard = StandardScaler()
+standardized_data = scaler_standard.fit_transform(df)
+standardized_df = pd.DataFrame(standardized_data, columns=df.columns)
+scaler_minmax = MinMaxScaler()
+normalized_data = scaler_minmax.fit_transform(df)
+normalized_df = pd.DataFrame(normalized_data, columns=df.columns)
+print("Standardized Data (first 5 rows):")
+print(standardized_df.head())
+print("\nNormalized Data (first 5 rows):")
+print(normalized_df.head())
+
+
+
+
+
+
+Sum of Sales Color-wise  Create Pivot Table in Excel for following
+
+=SUMIF(B2:B11, "Red", E2:E11)
+=SUMIF(B2:B11, "Blue", E2:E11)
+=SUMIF(B2:B11, "Green", E2:E11)
+
+Region-wise Total Sales and Total Units
+
+=SUMIF(C2:C11, "North", E2:E11)
+=SUMIF(C2:C11, "North", D2:D11)
+
+
+
+
+
+One Sample T-Test
+
+mport scipy.stats as stats
+scores = [72, 88, 64, 74, 67, 79, 85, 75, 89, 77]
+pop_mean = 70
+t_statistic, p_value = stats.ttest_1samp(scores, pop_mean)
+print("T-Statistic:", t_statistic)
+print("P-Value:", p_value)
+alpha = 0.05
+if p_value < alpha:
+    print("Reject Null Hypothesis (Significant difference).")
+else:
+    print("Fail to Reject Null Hypothesis (No significant difference).")
+
+
+
